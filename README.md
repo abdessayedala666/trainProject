@@ -79,13 +79,30 @@ Chaque train réserve une place à la gare de destination **avant** de quitter s
 
 #### Prévention de l'Interblocage
 
-**Pour les gares terminales :**
-- Un train ne peut quitter la gare que si **aucun train** ne circule en sens inverse
-- Cela évite que des trains se bloquent mutuellement sur les sections
+**Gestion par Segment :**
 
-**Pour les gares intermédiaires :**
-- Les trains peuvent partir même si d'autres circulent en sens inverse
-- Permet les croisements et évite les blocages
+La ligne est divisée en **segments** (portions entre deux gares). Chaque segment a son propre contrôle de direction.
+
+```
+Configuration avec gare intermédiaire :
+
+   Segment 0                    Segment 1
+┌────────────────────┐    ┌────────────────────┐
+│  GareA ── AB ── BC │────│ CD ── DE ── GareD  │
+└────────────────────┘    └────────────────────┘
+                    GareC
+                (croisement)
+```
+
+**Règle par segment :**
+- Un train ne peut entrer sur un segment que si **aucun train ne circule en sens inverse SUR CE SEGMENT**
+- Deux trains peuvent circuler en sens opposés sur des **segments différents** simultanément
+
+**Exemple :**
+- Train T1 (→) peut circuler sur le segment 0 (GareA → GareC)
+- Train T2 (←) peut circuler sur le segment 1 (GareD → GareC) **en même temps**
+- Ils se croisent dans GareC (gare intermédiaire)
+- Pas de blocage car ils sont sur des segments différents !
 
 ### 3. Invariants de Sûreté
 
@@ -96,12 +113,14 @@ Chaque train réserve une place à la gare de destination **avant** de quitter s
 - `Section.canAccept()` retourne `true` seulement si `trainCount == 0`
 - Utilisation de `synchronized` dans `Railway.move()`
 
-#### Invariant 2 : Sens unique (gares terminales)
-> Si un train circule sur les sections dans une direction, aucun train ne peut circuler en sens inverse
+#### Invariant 2 : Sens unique par segment
+> Sur un segment donné, si un train circule dans une direction, aucun train ne peut circuler en sens inverse **sur ce même segment**
 
 **Implémentation** :
-- Compteurs `trainsOnSectionsLR` et `trainsOnSectionsRL`
-- Vérification dans `canLeaveStation()` pour les gares terminales
+- Maps `trainsPerSegmentLR` et `trainsPerSegmentRL` : compteurs par segment et direction
+- Méthode `getSegmentIndex()` : identifie le segment entre deux gares
+- Méthode `noOppositeTrainsOnSegment()` : vérifie le segment spécifique
+- Vérification dans `canLeaveStation()` avant chaque départ
 
 #### Invariant 3 : Limite de trains (gares intermédiaires) ⚠️ **NOUVEAU**
 > Pour une gare intermédiaire avec **n places**, le nombre total de trains ne doit **pas dépasser n+1**
@@ -134,7 +153,7 @@ IntermediateStation C = new IntermediateStation("GareC", 2);  // 2 places
 ┌─────────────────────────────────────────┐
 │ 2. Vérifications (attente si nécessaire)│
 │    - Section suivante libre ?           │
-│    - Gare terminale ET trains opposés ? │
+│    - Trains opposés SUR CE SEGMENT ?    │
 │    - Gare destination a des places ?    │
 └──────────────┬──────────────────────────┘
                │ OUI à toutes
@@ -144,7 +163,7 @@ IntermediateStation C = new IntermediateStation("GareC", 2);  // 2 places
 │    - Réserver place à gare destination  │
 │    - Quitter gare actuelle              │
 │    - Entrer dans section                │
-│    - Incrémenter compteur direction     │
+│    - Enregistrer train sur le segment   │
 └──────────────┬──────────────────────────┘
                │
                ▼
@@ -162,7 +181,7 @@ IntermediateStation C = new IntermediateStation("GareC", 2);  // 2 places
 │                                         │
 │    Si vers GARE :                       │
 │    - Quitter section                    │
-│    - Décrémenter compteur direction     │
+│    - Libérer le segment                 │
 │    - Consommer réservation              │
 │    - Entrer dans gare                   │
 └──────────────┬──────────────────────────┘
