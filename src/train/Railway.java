@@ -9,15 +9,23 @@ package train;
  */
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Railway {
 	private final Element[] elements;  // Tableau des éléments composant la ligne (gares et sections)
 	private RailwayView view;  // Vue pour la visualisation graphique
 	
 	// === Variables pour la prévention de l'interblocage ===
-	// Compteur de trains circulant sur les sections de gauche à droite (LR)
+	// Compteur de trains par segment et par direction
+	// Un segment est défini par l'index de la gare de départ (vers la droite)
+	// Clé: index du segment, Valeur: nombre de trains allant vers la droite
+	private Map<Integer, Integer> trainsPerSegmentLR = new HashMap<>();
+	// Clé: index du segment, Valeur: nombre de trains allant vers la gauche
+	private Map<Integer, Integer> trainsPerSegmentRL = new HashMap<>();
+	
+	// Compteurs globaux pour l'affichage
 	private int trainsOnSectionsLR = 0;
-	// Compteur de trains circulant sur les sections de droite à gauche (RL)
 	private int trainsOnSectionsRL = 0;
 
 	public Railway(Element[] elements) {
@@ -130,31 +138,59 @@ public class Railway {
 	}
 
 	/**
+	 * Retourne l'index du segment entre deux gares
+	 * Un segment est identifié par l'index de la gare la plus à gauche
+	 * @param station la gare de départ
+	 * @param direction la direction du train
+	 * @return l'index du segment
+	 */
+	private int getSegmentIndex(Element station, Direction direction) {
+		int stationIndex = getIndex(station);
+		if (direction == Direction.LR) {
+			// Le segment est identifié par la gare de gauche
+			return stationIndex;
+		} else {
+			// Trouver la gare précédente (à gauche) pour identifier le segment
+			for (int i = stationIndex - 1; i >= 0; i--) {
+				if (elements[i] instanceof Station) {
+					return i;
+				}
+			}
+			return 0;
+		}
+	}
+
+	/**
+	 * Vérifie s'il y a des trains en sens inverse sur le segment spécifié
+	 * @param segmentIndex l'index du segment
+	 * @param direction la direction du train qui veut partir
+	 * @return true s'il n'y a pas de trains en sens inverse
+	 */
+	private boolean noOppositeTrainsOnSegment(int segmentIndex, Direction direction) {
+		if (direction == Direction.LR) {
+			// Vérifier s'il y a des trains allant vers la gauche sur ce segment
+			return trainsPerSegmentRL.getOrDefault(segmentIndex, 0) == 0;
+		} else {
+			// Vérifier s'il y a des trains allant vers la droite sur ce segment
+			return trainsPerSegmentLR.getOrDefault(segmentIndex, 0) == 0;
+		}
+	}
+
+	/**
 	 * Vérifie si un train peut quitter une gare pour entrer sur les sections
 	 * Invariant de sûreté: 
-	 * - un train ne peut pas entrer sur les sections si des trains circulent dans le sens opposé
+	 * - un train ne peut pas entrer sur un segment si des trains circulent dans le sens opposé SUR CE SEGMENT
 	 * - un train ne peut pas partir si la gare de destination est pleine
-	 * - pour les gares intermédiaires : un train peut partir même s'il y a du trafic opposé
-	 *   (car elles permettent les croisements)
 	 * @param currentElement la gare où se trouve le train
 	 * @param direction la direction dans laquelle le train veut aller
 	 * @return true si le train peut quitter la gare
 	 */
 	private boolean canLeaveStation(Element currentElement, Direction direction) {
-		Station currentStation = (Station) currentElement;
+		// Identifier le segment que le train veut emprunter
+		int segmentIndex = getSegmentIndex(currentElement, direction);
 		
-		// Vérifier qu'aucun train ne circule en sens inverse
-		// SAUF si on est dans une gare intermédiaire (qui permet les croisements)
-		boolean noOppositeTrains = true;
-		if (currentStation.isTerminal()) {
-			// Pour les gares terminales, on applique la règle stricte
-			if (direction == Direction.LR) {
-				noOppositeTrains = trainsOnSectionsRL == 0;
-			} else {
-				noOppositeTrains = trainsOnSectionsLR == 0;
-			}
-		}
-		// Pour les gares intermédiaires, on autorise les croisements (pas de vérification)
+		// Vérifier qu'aucun train ne circule en sens inverse SUR CE SEGMENT
+		boolean noOppositeTrains = noOppositeTrainsOnSegment(segmentIndex, direction);
 		
 		// Vérifier que la gare de destination a des quais disponibles
 		Station destination = getDestinationStation(currentElement, direction);
@@ -170,15 +206,11 @@ public class Railway {
 	 * @return le message expliquant pourquoi le train attend
 	 */
 	private String getWaitReason(Element currentElement, Direction direction) {
-		Station currentStation = (Station) currentElement;
+		int segmentIndex = getSegmentIndex(currentElement, direction);
 		
-		// Vérifier les trains en sens inverse (seulement pour les gares terminales)
-		if (currentStation.isTerminal()) {
-			if (direction == Direction.LR && trainsOnSectionsRL > 0) {
-				return "trains en sens inverse sur la ligne";
-			} else if (direction == Direction.RL && trainsOnSectionsLR > 0) {
-				return "trains en sens inverse sur la ligne";
-			}
+		// Vérifier les trains en sens inverse sur ce segment
+		if (!noOppositeTrainsOnSegment(segmentIndex, direction)) {
+			return "trains en sens inverse sur le segment " + segmentIndex;
 		}
 		
 		// Vérifier la gare de destination
@@ -191,27 +223,43 @@ public class Railway {
 	}
 
 	/**
-	 * Enregistre l'entrée d'un train sur une section
-	 * Incrémente le compteur de trains circulant dans cette direction
+	 * Enregistre l'entrée d'un train sur un segment
+	 * @param station la gare de départ
 	 * @param direction la direction du train (LR ou RL)
 	 */
-	private void enterSection(Direction direction) {
+	private void enterSegment(Element station, Direction direction) {
+		int segmentIndex = getSegmentIndex(station, direction);
+		
 		if (direction == Direction.LR) {
+			trainsPerSegmentLR.put(segmentIndex, trainsPerSegmentLR.getOrDefault(segmentIndex, 0) + 1);
 			trainsOnSectionsLR++;
 		} else {
+			trainsPerSegmentRL.put(segmentIndex, trainsPerSegmentRL.getOrDefault(segmentIndex, 0) + 1);
 			trainsOnSectionsRL++;
 		}
 	}
 
 	/**
-	 * Enregistre la sortie d'un train d'une section
-	 * Décrémente le compteur de trains circulant dans cette direction
+	 * Enregistre la sortie d'un train d'un segment
+	 * @param station la gare d'arrivée
 	 * @param direction la direction du train (LR ou RL)
 	 */
-	private void leaveSection(Direction direction) {
+	private void leaveSegment(Element station, Direction direction) {
+		int segmentIndex;
 		if (direction == Direction.LR) {
+			// On arrive à une gare, le segment est celui avant cette gare
+			for (int i = getIndex(station) - 1; i >= 0; i--) {
+				if (elements[i] instanceof Station) {
+					segmentIndex = i;
+					trainsPerSegmentLR.put(segmentIndex, Math.max(0, trainsPerSegmentLR.getOrDefault(segmentIndex, 0) - 1));
+					break;
+				}
+			}
 			trainsOnSectionsLR--;
 		} else {
+			// On arrive à une gare venant de la droite
+			segmentIndex = getIndex(station);
+			trainsPerSegmentRL.put(segmentIndex, Math.max(0, trainsPerSegmentRL.getOrDefault(segmentIndex, 0) - 1));
 			trainsOnSectionsRL--;
 		}
 	}
@@ -221,9 +269,9 @@ public class Railway {
 	 * 
 	 * Cette méthode implémente les règles de circulation et la prévention de l'interblocage :
 	 * - Un train attend si l'élément suivant est occupé
-	 * - Un train en gare terminale attend si des trains circulent en sens inverse
+	 * - Un train attend si des trains circulent en sens inverse SUR LE MÊME SEGMENT
 	 * - Un train réserve une place à la gare de destination avant de partir
-	 * - Les gares intermédiaires permettent les croisements (pas de restriction de sens)
+	 * - Les gares intermédiaires permettent de changer de segment (croisement)
 	 * 
 	 * @param train le train à déplacer
 	 */
@@ -273,8 +321,8 @@ public class Railway {
 			currentElement.leave();
 			// Entrer dans la section
 			nextElement.enter();
-			// Enregistrer le train sur les sections
-			enterSection(currentDirection);
+			// Enregistrer le train sur le segment
+			enterSegment(currentElement, currentDirection);
 		}
 		// CAS 2: Le train est dans une section et va vers une autre section
 		else if (currentElement instanceof Section && nextElement instanceof Section) {
@@ -303,8 +351,8 @@ public class Railway {
 			
 			// Quitter la section
 			currentElement.leave();
-			// Décompter le train des sections
-			leaveSection(currentDirection);
+			// Décompter le train du segment
+			leaveSegment(nextElement, currentDirection);
 			// Consommer la réservation (la transformer en occupation réelle)
 			arrivalStation.consumeReservation();
 			// Entrer dans la gare
