@@ -8,38 +8,23 @@ import java.awt.*;
  */
 public class RailwayFrame extends JFrame {
     private final RailwayView railwayView;
-    private final JTextArea logArea;
     
     public RailwayFrame(Railway railway, Element[] elements) {
-        super("Simulation de Ligne de Chemin de Fer");
+        super("TRAINS");
         
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
         
-        // Panneau de titre
-        JPanel titlePanel = new JPanel();
-        titlePanel.setBackground(new Color(44, 62, 80));
-        JLabel titleLabel = new JLabel(" Simulation de Trains ");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setForeground(Color.WHITE);
-        titlePanel.add(titleLabel);
-        add(titlePanel, BorderLayout.NORTH);
+        // Titre simple
+        JLabel titleLabel = new JLabel("SIMULATION TRAINS", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        titleLabel.setForeground(new Color(60, 60, 60));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        add(titleLabel, BorderLayout.NORTH);
         
         // Vue de la ligne
         railwayView = new RailwayView(railway, elements);
-        JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        centerPanel.setBackground(Color.WHITE);
-        centerPanel.add(railwayView, BorderLayout.CENTER);
-        add(centerPanel, BorderLayout.CENTER);
-        
-        // Zone de log
-        logArea = new JTextArea(10, 50);
-        logArea.setEditable(false);
-        logArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        JScrollPane scrollPane = new JScrollPane(logArea);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Journal des événements"));
-        add(scrollPane, BorderLayout.SOUTH);
+        add(railwayView, BorderLayout.CENTER);
         
         pack();
         setLocationRelativeTo(null);
@@ -51,13 +36,9 @@ public class RailwayFrame extends JFrame {
     }
     
     /**
-     * Ajoute un message au journal
+     * Ajoute un message au journal (désactivé)
      */
     public void log(String message) {
-        SwingUtilities.invokeLater(() -> {
-            logArea.append(message + "\n");
-            // Auto-scroll vers le bas
-            logArea.setCaretPosition(logArea.getDocument().getLength());
-        });
+        // Log désactivé
     }
 }

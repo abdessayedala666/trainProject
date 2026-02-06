@@ -36,34 +36,20 @@ public class Main {
 			// Associer la vue à la ligne
 			railway.setView(frame.getRailwayView());
 			
-			frame.log("Ligne de chemin de fer: " + railway);
-			frame.log("Configuration: 2 gares terminales (3 places) + 1 gare intermédiaire (2 places)");
-			frame.log("Invariant respecté: GareC a 2 places, donc max 3 trains (2+1)");
-			frame.log("");
-			
 			try {
 				// Création de 3 trains (respecte l'invariant : n+1 avec n=2 pour la gare intermédiaire)
 				
 				// Train 1 : part de GareA vers la droite
 				Position p1 = new Position(A, Direction.LR);
 				Train t1 = new Train("T1", p1, railway);
-				frame.log("Train T1 créé à GareA, direction → droite");
 				
 				// Train 2 : part de GareA vers la droite
 				Position p2 = new Position(A, Direction.LR);
 				Train t2 = new Train("T2", p2, railway);
-				frame.log("Train T2 créé à GareA, direction → droite");
 				
 				// Train 3 : part de GareD vers la gauche
 				Position p3 = new Position(D, Direction.RL);
 				Train t3 = new Train("T3", p3, railway);
-				frame.log("Train T3 créé à GareD, direction ← gauche");
-				
-				frame.log("");
-				frame.log("Démarrage de la simulation avec 3 trains...");
-				frame.log("Les trains peuvent se croiser à la GareC (gare intermédiaire)");
-				frame.log("(Les trains se déplacent toutes les secondes)");
-				frame.log("");
 
 				// Création et démarrage des threads pour chaque train
 				Thread thread1 = new Thread(t1);

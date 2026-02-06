@@ -3,16 +3,13 @@ package train;
 /**
  * Représentation de la position d'un train dans le circuit. Une position
  * est caractérisée par deux valeurs :
- * <ol>
- * <li>
+
  * L'élément où se positionne le train : une gare (classe {@link Station})
  * ou une section de voie ferrée (classe {@link Section}).
- * </li>
- * <li>
+
  * La direction qu'il prend (enumération {@link Direction}) : de gauche à
  * droite ou de droite à gauche.
- * </li>
- * </ol>
+
  * 
  * @author Fabien Dagnat <fabien.dagnat@imt-atlantique.fr> Modifié par Mayte
  *         Segarra

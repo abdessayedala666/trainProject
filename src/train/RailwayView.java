@@ -10,24 +10,24 @@ import java.util.Map;
  * Affiche les éléments (gares et sections) et les trains qui y circulent
  */
 public class RailwayView extends JPanel {
-    private static final int ELEMENT_WIDTH = 120;
-    private static final int ELEMENT_HEIGHT = 80;
-    private static final int TRAIN_SIZE = 30;
-    private static final int PADDING = 20;
+    private static final int ELEMENT_WIDTH = 110;
+    private static final int ELEMENT_HEIGHT = 70;
+    private static final int TRAIN_SIZE = 35;
+    private static final int PADDING = 15;
     
     private final Railway railway;
     private final Element[] elements;
     private final Map<String, Color> trainColors;
     private final Map<Element, java.util.List<Train>> trainPositions;
     
-    // Couleurs pour les trains
+    // Couleurs modernes pour les trains
     private static final Color[] COLORS = {
-        new Color(231, 76, 60),   // Rouge
-        new Color(46, 204, 113),  // Vert
-        new Color(52, 152, 219),  // Bleu
-        new Color(155, 89, 182),  // Violet
-        new Color(241, 196, 15),  // Jaune
-        new Color(230, 126, 34)   // Orange
+        new Color(231, 76, 60),   // Rouge moderne
+        new Color(52, 152, 219),  // Bleu moderne
+        new Color(46, 204, 113),  // Vert moderne
+        new Color(155, 89, 182),  // Violet moderne
+        new Color(230, 126, 34),  // Orange moderne
+        new Color(26, 188, 156)   // Turquoise moderne
     };
     
     private int colorIndex = 0;
@@ -47,7 +47,7 @@ public class RailwayView extends JPanel {
         int width = elements.length * (ELEMENT_WIDTH + PADDING) + PADDING;
         int height = ELEMENT_HEIGHT + 150;
         setPreferredSize(new Dimension(width, height));
-        setBackground(Color.WHITE);
+        setBackground(new Color(240, 240, 240));  // Fond clair simple
     }
     
     /**
@@ -95,10 +95,12 @@ public class RailwayView extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
+        // Activer l'anti-aliasing pour un rendu lisse
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
         
         int x = PADDING;
-        int y = 50;
+        int y = 30;
         
         // Dessiner chaque élément
         for (int i = 0; i < elements.length; i++) {
@@ -106,10 +108,11 @@ public class RailwayView extends JPanel {
             
             // Dessiner les connexions entre éléments
             if (i < elements.length - 1) {
-                g2d.setColor(Color.DARK_GRAY);
+                g2d.setColor(new Color(100, 100, 100));
                 g2d.setStroke(new BasicStroke(3));
                 g2d.drawLine(x + ELEMENT_WIDTH, y + ELEMENT_HEIGHT / 2, 
                             x + ELEMENT_WIDTH + PADDING, y + ELEMENT_HEIGHT / 2);
+                g2d.setStroke(new BasicStroke(1));
             }
             
             // Dessiner l'élément
@@ -127,60 +130,53 @@ public class RailwayView extends JPanel {
     
     private void drawElement(Graphics2D g2d, Element element, int x, int y) {
         if (element instanceof Station) {
-            // Gare - rectangle avec bordures arrondies
+            // Gare - rectangle arrondi simple
             Station station = (Station) element;
             
-            // Couleur différente pour les gares intermédiaires
-            if (element instanceof IntermediateStation) {
-                g2d.setColor(new Color(39, 174, 96));  // Vert pour gare intermédiaire
-            } else {
-                g2d.setColor(new Color(52, 73, 94));   // Bleu foncé pour gare terminale
-            }
+            g2d.setColor(new Color(70, 70, 70));
+            g2d.fillRoundRect(x, y, ELEMENT_WIDTH, ELEMENT_HEIGHT, 12, 12);
+            g2d.setColor(new Color(50, 50, 50));
+            g2d.setStroke(new BasicStroke(2));
+            g2d.drawRoundRect(x, y, ELEMENT_WIDTH, ELEMENT_HEIGHT, 12, 12);
+            g2d.setStroke(new BasicStroke(1));
             
-            g2d.fillRoundRect(x, y, ELEMENT_WIDTH, ELEMENT_HEIGHT, 15, 15);
             g2d.setColor(Color.WHITE);
-            g2d.setFont(new Font("Arial", Font.BOLD, 14));
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 11));
             
             String name = element.toString();
-            FontMetrics fm = g2d.getFontMetrics();
-            int textX = x + (ELEMENT_WIDTH - fm.stringWidth(name)) / 2;
-            g2d.drawString(name, textX, y + 25);
+            g2d.drawString(name, x + 8, y + 16);
             
             // Afficher le nombre de quais et trains
-            g2d.setFont(new Font("Arial", Font.PLAIN, 11));
-            String info = "Quais: " + station.getSize();
-            textX = x + (ELEMENT_WIDTH - fm.stringWidth(info)) / 2;
-            g2d.drawString(info, textX + 10, y + 45);
-            
             int trainCount = trainPositions.get(element).size();
-            String trainInfo = "Trains: " + trainCount + "/" + station.getSize();
-            g2d.drawString(trainInfo, textX + 5, y + 60);
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 10));
+            g2d.drawString("Quais: " + station.getSize(), x + 8, y + 32);
+            g2d.drawString("Trains: " + trainCount + "/" + station.getSize(), x + 8, y + 48);
             
-            // Indiquer si c'est une gare intermédiaire
+            // Indiquer si c'est une gare de croisement
             if (element instanceof IntermediateStation) {
-                g2d.setFont(new Font("Arial", Font.ITALIC, 9));
-                g2d.drawString("(croisement)", textX + 3, y + 73);
+                g2d.setColor(new Color(100, 200, 100));
+                g2d.setFont(new Font("SansSerif", Font.BOLD, 9));
+                g2d.drawString("CROISEMENT", x + 8, y + 62);
             }
             
         } else {
-            // Section - rectangle simple
+            // Section - rectangle arrondi simple
             int trainCount = trainPositions.get(element).size();
             
-            // Couleur selon l'occupation
-            if (trainCount > 0) {
-                g2d.setColor(new Color(231, 76, 60)); // Rouge si occupé
-            } else {
-                g2d.setColor(new Color(149, 165, 166)); // Gris si libre
-            }
+            Color fillColor = trainCount > 0 ? new Color(220, 80, 80) : Color.WHITE;
+            Color borderColor = trainCount > 0 ? new Color(180, 60, 60) : new Color(180, 180, 180);
             
-            g2d.fillRect(x, y + 20, ELEMENT_WIDTH, ELEMENT_HEIGHT - 40);
-            g2d.setColor(Color.WHITE);
-            g2d.setFont(new Font("Arial", Font.BOLD, 12));
+            g2d.setColor(fillColor);
+            g2d.fillRoundRect(x, y + 20, ELEMENT_WIDTH, ELEMENT_HEIGHT - 40, 10, 10);
+            g2d.setColor(borderColor);
+            g2d.setStroke(new BasicStroke(2));
+            g2d.drawRoundRect(x, y + 20, ELEMENT_WIDTH, ELEMENT_HEIGHT - 40, 10, 10);
+            g2d.setStroke(new BasicStroke(1));
             
+            g2d.setColor(trainCount > 0 ? Color.WHITE : new Color(60, 60, 60));
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 11));
             String name = element.toString();
-            FontMetrics fm = g2d.getFontMetrics();
-            int textX = x + (ELEMENT_WIDTH - fm.stringWidth(name)) / 2;
-            g2d.drawString(name, textX, y + ELEMENT_HEIGHT / 2 + 5);
+            g2d.drawString(name, x + 8, y + ELEMENT_HEIGHT / 2 + 4);
         }
     }
     
@@ -189,82 +185,75 @@ public class RailwayView extends JPanel {
         if (trains == null || trains.isEmpty()) return;
         
         int trainY = y + ELEMENT_HEIGHT + 10;
-        int trainX = x + (ELEMENT_WIDTH - (trains.size() * (TRAIN_SIZE + 5))) / 2;
+        int trainX = x;
         
         for (Train train : trains) {
             Color color = trainColors.getOrDefault(train.getName(), Color.GRAY);
             
-            // Dessiner le train (cercle)
+            // Dessiner le train (rectangle arrondi simple)
             g2d.setColor(color);
-            g2d.fillOval(trainX, trainY, TRAIN_SIZE, TRAIN_SIZE);
-            
-            // Bordure
-            g2d.setColor(Color.BLACK);
+            g2d.fillRoundRect(trainX, trainY, TRAIN_SIZE, TRAIN_SIZE, 8, 8);
+            g2d.setColor(color.darker());
             g2d.setStroke(new BasicStroke(2));
-            g2d.drawOval(trainX, trainY, TRAIN_SIZE, TRAIN_SIZE);
+            g2d.drawRoundRect(trainX, trainY, TRAIN_SIZE, TRAIN_SIZE, 8, 8);
+            g2d.setStroke(new BasicStroke(1));
             
             // Nom du train
             g2d.setColor(Color.WHITE);
-            g2d.setFont(new Font("Arial", Font.BOLD, 10));
-            FontMetrics fm = g2d.getFontMetrics();
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 12));
             String name = train.getName();
+            FontMetrics fm = g2d.getFontMetrics();
             int textX = trainX + (TRAIN_SIZE - fm.stringWidth(name)) / 2;
-            int textY = trainY + TRAIN_SIZE / 2 + 4;
+            int textY = trainY + (TRAIN_SIZE + fm.getAscent()) / 2 - 2;
             g2d.drawString(name, textX, textY);
             
-            // Flèche de direction
+            // Direction avec flèche stylisée
             Direction dir = train.getPosition().getDirection();
-            g2d.setColor(Color.BLACK);
-            int arrowY = trainY + TRAIN_SIZE + 5;
-            int arrowX = trainX + TRAIN_SIZE / 2;
-            if (dir == Direction.LR) {
-                g2d.drawString("→", arrowX - 5, arrowY + 10);
-            } else {
-                g2d.drawString("←", arrowX - 5, arrowY + 10);
-            }
+            String dirStr = (dir == Direction.LR) ? "→" : "←";
+            g2d.setColor(new Color(236, 240, 241));
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 14));
+            g2d.drawString(dirStr, trainX + TRAIN_SIZE / 2 - 5, trainY + TRAIN_SIZE + 16);
             
             trainX += TRAIN_SIZE + 10;
         }
     }
     
     private void drawLegend(Graphics2D g2d) {
-        int legendY = getHeight() - 30;
+        int legendY = getHeight() - 20;
         int legendX = 10;
         
-        g2d.setFont(new Font("Arial", Font.BOLD, 12));
-        g2d.setColor(Color.BLACK);
-        g2d.drawString("Légende:", legendX, legendY);
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 11));
+        g2d.setColor(new Color(60, 60, 60));
+        g2d.drawString("LÉGENDE:", legendX, legendY);
         
-        legendX += 70;
+        legendX += 75;
         
         synchronized (this) {
             for (Map.Entry<String, Color> entry : trainColors.entrySet()) {
                 g2d.setColor(entry.getValue());
-                g2d.fillOval(legendX, legendY - 12, 15, 15);
-                g2d.setColor(Color.BLACK);
-                g2d.drawString("Train " + entry.getKey(), legendX + 20, legendY);
-                legendX += 80;
+                g2d.fillRoundRect(legendX, legendY - 12, 14, 14, 4, 4);
+                g2d.setColor(new Color(60, 60, 60));
+                g2d.drawString("T" + entry.getKey(), legendX + 18, legendY);
+                legendX += 55;
             }
         }
         
         // Afficher le statut des trains sur les sections
-        legendX += 30;
+        legendX += 15;
         int trainsLR = railway.getTrainsOnSectionsLR();
         int trainsRL = railway.getTrainsOnSectionsRL();
         
-        g2d.setColor(Color.BLACK);
+        g2d.setColor(new Color(120, 120, 120));
         g2d.drawString("|", legendX, legendY);
         legendX += 15;
         
-        // Indicateur direction
+        g2d.setColor(new Color(80, 160, 80));
         if (trainsLR > 0) {
-            g2d.setColor(new Color(46, 204, 113)); // Vert
-            g2d.drawString("→ " + trainsLR + " train(s) sur ligne", legendX, legendY);
+            g2d.drawString("→ " + trainsLR + " sur ligne", legendX, legendY);
         } else if (trainsRL > 0) {
-            g2d.setColor(new Color(52, 152, 219)); // Bleu
-            g2d.drawString("← " + trainsRL + " train(s) sur ligne", legendX, legendY);
+            g2d.drawString("← " + trainsRL + " sur ligne", legendX, legendY);
         } else {
-            g2d.setColor(Color.GRAY);
+            g2d.setColor(new Color(120, 120, 120));
             g2d.drawString("Ligne libre", legendX, legendY);
         }
     }
