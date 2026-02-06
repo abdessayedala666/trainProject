@@ -20,10 +20,9 @@ public class Main {
 		Section AB = new Section("AB");
 		Section BC = new Section("BC");
 		Section CD = new Section("CD");
-		Section DE = new Section("DE");
 		
-		// Tableau des éléments pour la ligne : GareA -- AB -- BC -- GareC -- CD -- DE -- GareD
-		Element[] elements = { A, AB, BC, C, CD, DE, D };
+		// Tableau des éléments pour la ligne : GareA -- AB -- BC -- GareC -- CD -- GareD
+		Element[] elements = { A, AB, BC, C, CD, D };
 		
 		// Création de la ligne
 		Railway railway = new Railway(elements);
