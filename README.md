@@ -17,8 +17,7 @@ trains_project/
 │       ├── BadPositionForTrainException.java   # Exception pour position invalide
 │       ├── Direction.java                      # Énumération des directions (LR/RL)
 │       ├── Element.java                        # Classe abstraite pour éléments de la ligne
-│       ├── Station.java                        # Gare terminale
-│       ├── IntermediateStation.java           # Gare intermédiaire (permet croisements)
+│       ├── Station.java                        # Gare
 │       ├── Section.java                        # Section de voie ferrée
 │       ├── Position.java                       # Position d'un train (élément + direction)
 │       ├── Train.java                          # Représentation d'un train
@@ -33,8 +32,7 @@ trains_project/
 
 ```
 Element (abstract)
-├── Station                    # Gare terminale (aux extrémités)
-│   └── IntermediateStation   # Gare intermédiaire (au milieu de la ligne)
+├── Station                    # Gare (aux extrémités)
 └── Section                    # Section de voie ferrée
 
 Train (Runnable)              # Train autonome (thread)
@@ -47,17 +45,11 @@ Railway                        # Gestionnaire de la ligne ferroviaire
 
 ### 1. Éléments de la Ligne
 
-#### Station (Gare Terminale)
+#### Station (Gare)
 - **Capacité** : n quais (peut accueillir n trains simultanément)
 - **Position** : Aux extrémités de la ligne (début ou fin)
 - **Fonction** : Point de départ/arrivée des trains
 - **Règle** : Les trains changent de direction automatiquement en arrivant
-
-#### IntermediateStation (Gare Intermédiaire)
-- **Capacité** : n quais
-- **Position** : Au milieu de la ligne, entre des sections
-- **Fonction** : Permet aux trains de se croiser
-- **Particularité** : Pas de restriction de sens unique (contrairement aux gares terminales)
 
 #### Section
 - **Capacité** : 1 train maximum
@@ -84,25 +76,14 @@ Chaque train réserve une place à la gare de destination **avant** de quitter s
 La ligne est divisée en **segments** (portions entre deux gares). Chaque segment a son propre contrôle de direction.
 
 ```
-Configuration avec gare intermédiaire :
+Configuration :
 
-   Segment 0                    Segment 1
-┌────────────────────┐    ┌────────────────────┐
-│  GareA ── AB ── BC │────│ CD ── DE ── GareD  │
-└────────────────────┘    └────────────────────┘
-                    GareC
-                (croisement)
+   GareA ── AB ── BC ── CD ── GareD
 ```
 
-**Règle par segment :**
-- Un train ne peut entrer sur un segment que si **aucun train ne circule en sens inverse SUR CE SEGMENT**
-- Deux trains peuvent circuler en sens opposés sur des **segments différents** simultanément
-
-**Exemple :**
-- Train T1 (→) peut circuler sur le segment 0 (GareA → GareC)
-- Train T2 (←) peut circuler sur le segment 1 (GareD → GareC) **en même temps**
-- Ils se croisent dans GareC (gare intermédiaire)
-- Pas de blocage car ils sont sur des segments différents !
+**Règle :**
+- Un train ne peut entrer sur la ligne que si **aucun train ne circule en sens inverse**
+- Les trains dans le même sens peuvent se suivre (mais pas se doubler)
 
 ### 3. Invariants de Sûreté
 
@@ -113,33 +94,22 @@ Configuration avec gare intermédiaire :
 - `Section.canAccept()` retourne `true` seulement si `trainCount == 0`
 - Utilisation de `synchronized` dans `Railway.move()`
 
-#### Invariant 2 : Sens unique par segment
-> Sur un segment donné, si un train circule dans une direction, aucun train ne peut circuler en sens inverse **sur ce même segment**
+#### Invariant 2 : Sens unique sur la ligne
+> Si un train circule dans une direction, aucun train ne peut circuler en sens inverse sur les sections
 
 **Implémentation** :
-- Maps `trainsPerSegmentLR` et `trainsPerSegmentRL` : compteurs par segment et direction
-- Méthode `getSegmentIndex()` : identifie le segment entre deux gares
-- Méthode `noOppositeTrainsOnSegment()` : vérifie le segment spécifique
-- Vérification dans `canLeaveStation()` avant chaque départ
+- Compteurs `trainsOnSectionsLR` et `trainsOnSectionsRL` : nombre de trains par direction
+- Méthode `canLeaveStation()` : vérifie qu'aucun train n'est en sens inverse
+- Vérification avant chaque départ de gare
 
-#### Invariant 3 : Limite de trains (gares intermédiaires) ⚠️ **NOUVEAU**
-> Pour une gare intermédiaire avec **n places**, le nombre total de trains ne doit **pas dépasser n+1**
+#### Invariant 3 : Réservation de place
+> Un train doit réserver une place à la gare de destination **avant** de partir
 
 **Pourquoi ?**
-Avec n places et n+2 trains :
-- n trains peuvent occuper la gare intermédiaire
-- 1 train attend de chaque côté
-- **Interblocage** : personne ne peut avancer !
+Sans réservation, plusieurs trains pourraient partir vers une gare qui n'a pas assez de places.
 
 **Solution :**
-Avec n+1 trains maximum, il reste toujours de la place pour qu'au moins un train puisse entrer et libérer l'espace.
-
-**Exemple dans Main.java :**
-```java
-IntermediateStation C = new IntermediateStation("GareC", 2);  // 2 places
-// On crée 3 trains (2+1) ✓
-// PAS 4 trains (2+2) ✗ → risque d'interblocage
-```
+Le train réserve une place dès qu'il décide de partir. La réservation est convertie en occupation réelle à l'arrivée.
 
 ## Workflow de Déplacement d'un Train
 
@@ -240,43 +210,30 @@ Si vous utilisez VS Code :
 Éditer [src/train/Main.java](src/train/Main.java) :
 
 ```java
-// Configuration actuelle : 3 trains (respecte l'invariant pour GareC avec 2 places)
+// Configuration actuelle : 4 trains
 Train t1 = new Train("T1", new Position(A, Direction.LR), railway);
 Train t2 = new Train("T2", new Position(A, Direction.LR), railway);
 Train t3 = new Train("T3", new Position(D, Direction.RL), railway);
-
-// Pour ajouter un 4ème train (ATTENTION : risque d'interblocage avec GareC à 2 places)
-// Train t4 = new Train("T4", new Position(D, Direction.RL), railway);
+Train t4 = new Train("T4", new Position(D, Direction.RL), railway);
 ```
-
- **Attention** : Avec une gare intermédiaire de 2 places, ne dépassez pas 3 trains !
 
 ### Modifier la Configuration de la Ligne
 
 ```java
 // Exemple actuel
-Station A = new Station("GareA", 3);              // Gare terminale gauche, 3 places
-IntermediateStation C = new IntermediateStation("GareC", 2);  // Gare intermédiaire, 2 places
-Station D = new Station("GareD", 3);              // Gare terminale droite, 3 places
+Station A = new Station("GareA", 3);              // Gare gauche, 3 places
+Station D = new Station("GareD", 3);              // Gare droite, 3 places
 
 Section AB = new Section("AB");
 Section BC = new Section("BC");
 Section CD = new Section("CD");
-Section DE = new Section("DE");
 
-Element[] elements = { A, AB, BC, C, CD, DE, D };
-```
-
-**Pour ajouter une section :**
-```java
-Section EF = new Section("EF");
-Element[] elements = { A, AB, BC, C, CD, DE, EF, D };
+Element[] elements = { A, AB, BC, CD, D };
 ```
 
 **Pour modifier la capacité d'une gare :**
 ```java
-IntermediateStation C = new IntermediateStation("GareC", 4);  // 4 places au lieu de 2
-// Alors on peut avoir jusqu'à 5 trains (4+1)
+Station A = new Station("GareA", 5);  // 5 places au lieu de 3
 ```
 
 ## Visualisation
@@ -288,50 +245,41 @@ Le programme affiche :
 ### Exemple de Sortie Console
 
 ```
-Ligne de chemin de fer: GareA--AB--BC--GareC--CD--DE--GareD
-Configuration: 2 gares terminales (3 places) + 1 gare intermédiaire (2 places)
-Invariant respecté: GareC a 2 places, donc max 3 trains (2+1)
+Ligne de chemin de fer: GareA--AB--BC--CD--GareD
+Configuration: 2 gares terminales (3 places chacune)
 
 Train T1 créé à GareA, direction → droite
 Train T2 créé à GareA, direction → droite
 Train T3 créé à GareD, direction ← gauche
+Train T4 créé à GareD, direction ← gauche
 
-Démarrage de la simulation avec 3 trains...
-Les trains peuvent se croiser à la GareC (gare intermédiaire)
+Démarrage de la simulation avec 4 trains...
 
 Train[T1] démarre
 Train[T2] démarre
 Train[T3] démarre
-Train[T1] réserve une place à GareC (disponibles: 1/2)
-Train[T3] réserve une place à GareC (disponibles: 0/2)
+Train[T1] réserve une place à GareD (disponibles: 2/3)
+Train[T3] réserve une place à GareA (disponibles: 2/3)
 Train[T1] is on AB going from left to right
-Train[T3] is on DE going from right to left
+Train[T3] is on CD going from right to left
 ...
 ```
 
 ## Tests et Validation
 
-### Test 1 : Respect de l'invariant (3 trains, gare de 2 places)
- **Résultat attendu** : Les trains circulent sans blocage
+### Test 1 : Prévention de l'interblocage
+ **Résultat attendu** : Les trains circulent sans blocage grâce à la règle de sens unique
 
-### Test 2 : Violation de l'invariant (4 trains, gare de 2 places)
- **Résultat attendu** : Risque d'interblocage
+### Test 2 : Système de réservation
+ **Résultat attendu** : Les trains réservent leur place avant de partir, pas de surcharge des gares
 
-Pour tester :
-```java
-// Dans Main.java, décommenter le 4ème train
-Train t4 = new Train("T4", new Position(A, Direction.LR), railway);
-Thread thread4 = new Thread(t4);
-thread4.start();
-```
-
-### Test 3 : Croisement dans gare intermédiaire
- **Résultat attendu** : Les trains venant de directions opposées peuvent se croiser dans la gare intermédiaire
+### Test 3 : Visualisation
+ **Résultat attendu** : L'interface graphique affiche les trains et leurs mouvements en temps réel
 
 ## Auteurs et Références
 
 - **Auteurs originaux** : Fabien Dagnat, Philippe Tanguy, Mayte Segarra (IMT Atlantique)
-- **Modifications** : Extension avec gares intermédiaires et nouvel invariant de sûreté
+- **Modifications** : Extension avec système de réservation et visualisation graphique
 
 ## Licence
 

@@ -31,7 +31,7 @@ public abstract class Element {
 			throw new NullPointerException();
 
 		this.railway = r;
-	}
+	}	
 
 	public Railway getRailway() {
 		return this.railway;

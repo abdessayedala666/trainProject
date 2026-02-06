@@ -389,7 +389,7 @@ public class Railway {
 	}
 
 	/**
-	 * Retourne le nombre de trains sur les sections allant vers la droite
+	 * Retourne le nombre de trains sur les se	ctions allant vers la droite
 	 */
 	public int getTrainsOnSectionsLR() {
 		return trainsOnSectionsLR;
